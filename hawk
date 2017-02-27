@@ -1,0 +1,30 @@
+#!/bin/zsh
+f=/tmp/hawk.$$.tmp
+trap "rm -f $f" 0 1 2 3
+awk -v f=$f '
+	BEGIN	{
+		consts = "PI = atan2(0,-1)\n"	\
+			"E = exp(1)\n"
+		funcs = "func abs(x) { return( x > 0 ? x : -x ) }\n"
+	}
+	{	sub( /[#].*$/, "" )	}
+	/./	{
+		funcline = 0
+		if( $1 ~ /^func/ )	{
+			funcline = 1
+			oldfuncs = funcs
+			funcs = funcs $0 "\n"
+		} else	hist[n] = "a" ++n " = " $0
+		print funcs "BEGIN {\n" consts >f
+		for( i = 1; i <= n; ++i ) print hist[i] >f
+		if( !funcline )	{
+			if( $0 !~ /=/ ) print "print \" a" n " = \"a"n >f
+		}
+		print "}" >f
+		close( f )
+		if( system( "gawk -f " f ) )	{
+			if( funcline ) funcs = oldfuncs
+			else	--n
+		}
+	}
+' ${*:--}
